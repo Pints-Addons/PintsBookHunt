@@ -1,0 +1,8 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+  <Frame name="PintsBookHuntPinTemplate" virtual="true" mixin="PintsBookHuntPinMixin" enableMouse="true">
+    <Size x="18" y="18"/>
+    <Scripts>
+      <OnLoad method="OnLoad"/>
+    </Scripts>
+  </Frame>
+</Ui>

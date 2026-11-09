@@ -1,0 +1,10 @@
+Pint's Book Hunt - Changelog
+
+v1.0
+- First release: a checklist of the 40 books for Friend of the Library (WoW Forever) - book, zone, location and
+  how hard it is (solo, group, hard), with a guide video for each and one for all 40 by the shortest route.
+- Books tick themselves off when you read, loot or carry them (or tick them by hand). Counted per character, with
+  how many your other characters have.
+- "Way" points Pint's Quest Book's arrow at a book (or TomTom's, or the game's map pin).
+- Book icons on the world map for the books you still need (Ctrl-click one for the way there).
+- The rewards at 10 and 20 books, who to hand them to for your faction, and whether you're ready or done.

@@ -1,0 +1,16 @@
+## Interface: 11508, 11509, 16001
+## Title: |cffd4a017Pint's|r Book Hunt
+## Notes: A checklist of the 40 books for Friend of the Library (WoW Forever): where each one is, a waypoint and map icons to it, guide videos, and the 10- and 20-book rewards. Ticks books off by itself. /books
+## Author: Jake (Pint's Add-ons, built with Claude)
+## Version: 1.0
+## X-Curse-Project-ID: 1793461
+## X-License: GPL-3.0
+## IconTexture: Interface\Icons\INV_Misc_Book_09
+## SavedVariables: PintsBookHuntDB
+## SavedVariablesPerCharacter: PintsBookHuntChar
+## OptionalDeps: PintsQuestBook, TomTom
+
+Data.lua
+PintsBookHunt.lua
+MapPins.lua
+MapPins.xml
