@@ -1,5 +1,15 @@
 Pint's Book Hunt - Changelog
 
+v1.0.1
+- Rewards are the real items: the game's tooltip, Shift-click to link them in chat, Ctrl-click to try them on.
+- The hand-in button points the way to your librarian (Garion Wendell in Stormwind's Mage Quarter, Owen Thadd in
+  Undercity's Magic Quarter).
+- Minimap button: click for the checklist, right-click for the way to a book you still need; your count in its
+  tooltip. Drag it round the minimap; /books minimap hides it.
+- Rumi of Gnomeregan: The Collected Works shows both places it's found (Thelsamar inn, Loch Modan, and the Sentinel
+  Hill inn, Westfall).
+- WoW Forever: fixed errors opening the checklist and hovering the rewards.
+
 v1.0
 - First release: a checklist of the 40 books for Friend of the Library (WoW Forever) - book, zone, location and
   how hard it is (solo, group, hard), with a guide video for each and one for all 40 by the shortest route.

@@ -6,6 +6,9 @@ local B = {}
 _G.PintsBookHunt = B
 
 local BOOKS, TIERS, TURNIN = NS.BOOKS, NS.TIERS, NS.TURNIN
+-- (WoW Forever moved these into C_Item)
+local GetItemInfo = GetItemInfo or (C_Item and C_Item.GetItemInfo) or function() end
+local GetItemIcon = GetItemIcon or (C_Item and C_Item.GetItemIconByID)
 local char, acct                      -- PintsBookHuntChar (this character), PintsBookHuntDB (all characters)
 local GOLD = "|cffd4a017"
 local function Say(m) print(GOLD .. "Pint's Book Hunt:|r " .. m) end
@@ -148,12 +151,30 @@ StaticPopupDialogs["PINTSBOOKHUNT_LINK"] = {
 local function CopyLink(title, url) StaticPopup_Show("PINTSBOOKHUNT_LINK", title, nil, url) end
 
 ---------------------------------------------------------------- reward items: a real tooltip once the game knows them
-local function ItemTip(owner, name)
+local function ItemTip(owner, id, name)
 	GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
-	local _, link = GetItemInfo(name)
-	if link then GameTooltip:SetHyperlink(link)
-	else GameTooltip:AddLine(name, 0, 0.44, 0.87); GameTooltip:AddLine("(the full tooltip shows once you've seen the item)", 0.6, 0.6, 0.6, true) end
+	-- by its item number: the game fetches it if it hasn't seen the item yet (the tooltip fills in a moment later)
+	local ok = pcall(GameTooltip.SetHyperlink, GameTooltip, "item:" .. id)
+	if not ok or GameTooltip:NumLines() == 0 then GameTooltip:AddLine(name, 0, 0.44, 0.87) end
+	GameTooltip:AddLine("Shift-click: link in chat   Ctrl-click: try it on", 0.5, 0.5, 0.5)
 	GameTooltip:Show()
+	owner.tipShown = true
+end
+local function ItemLink(id, name)
+	local _, link = GetItemInfo(id)
+	return link or ("|cff0070dd|Hitem:%d::::::::::::|h[%s]|h|r"):format(id, name)
+end
+local function ItemClick(id, name)
+	local link = ItemLink(id, name)
+	if IsShiftKeyDown() or (IsModifiedClick and IsModifiedClick("CHATLINK")) then
+		-- into the chat box you're typing in; with none open, open one with the link in it
+		local insert = ChatEdit_InsertLink or (ChatFrameUtil and ChatFrameUtil.InsertLink)
+		local done = insert and insert(link)
+		if not done then
+			local open = ChatFrame_OpenChat or (ChatFrameUtil and ChatFrameUtil.OpenChat)
+			if open then open(link) end
+		end
+	elseif IsControlKeyDown() and DressUpItemLink then DressUpItemLink(link) end
 end
 
 ---------------------------------------------------------------- the window
@@ -206,6 +227,7 @@ local function Row(i)
 		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
 		GameTooltip:AddLine(b[2], 1, 0.82, 0)
 		GameTooltip:AddLine(("%s  %.1f, %.1f"):format(b[3], b[5], b[6]), 1, 1, 1)
+		for _, a in ipairs(b.also or {}) do GameTooltip:AddLine(("or %s  %.1f, %.1f"):format(a[1], a[3], a[4]), 1, 1, 1) end
 		GameTooltip:AddLine(b[7], 0.8, 0.8, 0.8)
 		if char.got[b[1]] then GameTooltip:AddLine("Collected " .. date("%d %b %Y", char.got[b[1]]), 0.4, 1, 0.4) end
 		GameTooltip:AddLine("Click: point the way   (Way does the same; Video copies a link to a guide)", 0.5, 0.5, 0.5, true)
@@ -249,7 +271,7 @@ function Refresh()
 		r.chk:SetChecked(got)
 		local dim = got and "|cff707070" or ""
 		r.num:SetText(dim .. b[1]); r.name:SetText((got and "|cff707070" or "|cffffffff") .. b[2])
-		r.zone:SetText(dim .. b[3]); r.xy:SetText(("%s%.1f, %.1f"):format(dim, b[5], b[6]))
+		r.zone:SetText(dim .. b[3] .. (b.also and " |cff909090(+" .. #b.also .. ")|r" or "")); r.xy:SetText(("%s%.1f, %.1f"):format(dim, b[5], b[6]))
 		r.note:SetText((got and "|cff707070" or NoteColor(b[7])) .. b[7])
 		r:Show()
 	end
@@ -355,10 +377,10 @@ local function Build()
 	line:SetPoint("BOTTOMLEFT", 20, 168); line:SetPoint("BOTTOMRIGHT", -20, 168)
 	local rh = win:CreateFontString(nil, "OVERLAY", "GameFontNormal"); rh:SetPoint("BOTTOMLEFT", 20, 146); rh:SetText("Rewards")
 	win.turnin = win:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"); win.turnin:SetPoint("LEFT", rh, "RIGHT", 12, 0)
-	local tmap = Button(win, "Map", 50, 18); tmap:SetPoint("LEFT", win.turnin, "RIGHT", 8, 0)
-	tmap:SetScript("OnClick", function() OpenMap(TURNIN[Faction()].map) end)
+	local tmap = Button(win, "Way", 50, 18); tmap:SetPoint("LEFT", win.turnin, "RIGHT", 8, 0)
+	tmap:SetScript("OnClick", function() local ti = TURNIN[Faction()]; B.Waypoint(ti.map, ti.x, ti.y, ti.npc, ti.where) end)
 	tmap:SetScript("OnEnter", function(self)
-		GameTooltip:SetOwner(self, "ANCHOR_TOP"); GameTooltip:AddLine("Open the map of the city where you hand in")
+		GameTooltip:SetOwner(self, "ANCHOR_TOP"); GameTooltip:AddLine("Point the way to the librarian")
 		local o = TURNIN[Faction() == "Alliance" and "Horde" or "Alliance"]
 		GameTooltip:AddLine(("(the other side hands in to %s, %s)"):format(o.npc, o.where), 0.7, 0.7, 0.7, true)
 		GameTooltip:Show()
@@ -374,16 +396,19 @@ local function Build()
 		local ch = win:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"); ch:SetPoint("TOPLEFT", blk.status, "BOTTOMLEFT", 0, -6)
 		ch:SetText("Choose one:")
 		local prev = ch
-		for _, name in ipairs(t.rewards) do
+		for _, rw in ipairs(t.rewards) do
+			local id, name = rw[1], rw[2]
 			local rb = CreateFrame("Button", nil, win); rb:SetSize(300, 18)
 			rb:SetPoint("TOPLEFT", prev, "BOTTOMLEFT", prev == ch and 10 or 0, -3)
 			local ic = rb:CreateTexture(nil, "ARTWORK"); ic:SetSize(16, 16); ic:SetPoint("LEFT")
-			ic:SetTexture((GetItemIcon and GetItemIcon(name)) or "Interface\\Icons\\INV_Misc_QuestionMark")
+			ic:SetTexture((GetItemIcon and GetItemIcon(id)) or "Interface\\Icons\\INV_Misc_QuestionMark")
 			local fs = rb:CreateFontString(nil, "OVERLAY", "GameFontHighlight"); fs:SetPoint("LEFT", ic, "RIGHT", 4, 0)
 			fs:SetText("|cff0070dd" .. name .. "|r")
-			rb:SetScript("OnEnter", function(self) ItemTip(self, name) end)
-			rb:SetScript("OnLeave", function() GameTooltip:Hide() end)
-			rb.icon = ic; rb.itemName = name
+			rb:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+			rb:SetScript("OnEnter", function(self) ItemTip(self, id, name) end)
+			rb:SetScript("OnLeave", function(self) self.tipShown = nil; GameTooltip:Hide() end)
+			rb:SetScript("OnClick", function() ItemClick(id, name) end)
+			rb.icon = ic; rb.itemID = id; rb.itemName = name; rb.text = fs
 			blk[#blk + 1] = rb
 			prev = rb
 		end
@@ -399,14 +424,77 @@ function B.Toggle()
 	if not win then Build() end
 	if win:IsShown() then win:Hide() else win:Show() end
 	-- reward icons fill in once the game has looked the items up
+	B.RewardLooks()
+end
+-- the reward icons and names in their quality colour, once the game has looked the items up
+function B.RewardLooks()
+	if not win then return end
 	for _, blk in ipairs(win.tiers) do
-		for _, rb in ipairs(blk) do local ic = GetItemIcon and GetItemIcon(rb.itemName); if ic then rb.icon:SetTexture(ic) end end
+		for _, rb in ipairs(blk) do
+			local _, _, q, _, _, _, _, _, _, tex = GetItemInfo(rb.itemID)
+			tex = tex or (GetItemIcon and GetItemIcon(rb.itemID))
+			if tex then rb.icon:SetTexture(tex) end
+			if q and ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[q] then rb.text:SetText(ITEM_QUALITY_COLORS[q].hex .. rb.itemName .. "|r") end
+			if rb.tipShown and GameTooltip:GetOwner() == rb then ItemTip(rb, rb.itemID, rb.itemName) end
+		end
+	end
+end
+
+---------------------------------------------------------------- minimap button
+-- (LibDBIcon when another add-on brings it, so it sits with your other buttons; otherwise a button of its own)
+do
+	local NAME, ICON, ANGLE = "PintsBookHunt", "Interface\\Icons\\INV_Misc_Book_09", 200
+	local btn
+	local function Tip(tt)
+		tt:AddLine("Pint's Book Hunt")
+		tt:AddLine(("%d / %d books collected"):format(Count(), #BOOKS), 1, 1, 1)
+		for i, t in ipairs(TIERS) do
+			local st = (char and char.turned[i]) and "|cff40ff40done|r" or (Count() >= t.need and "|cffffd100ready to hand in|r") or ("%d more"):format(t.need - Count())
+			tt:AddDoubleLine(("%d books: %s"):format(t.need, t.title), st, 0.8, 0.8, 0.8, 1, 1, 1)
+		end
+		tt:AddLine("Click: the checklist   Right-click: way to a book you still need", 0.5, 0.5, 0.5, true)
+		tt:AddLine("Drag to move   /books minimap to hide", 0.5, 0.5, 0.5)
+	end
+	local function Click(_, button)
+		if button == "RightButton" then SlashCmdList.PINTSBOOKHUNT("next") else B.Toggle() end
+	end
+	function B.BuildMinimap()
+		acct.minimap = acct.minimap or {}
+		local store = acct.minimap
+		local LDB = LibStub and LibStub("LibDataBroker-1.1", true)
+		local Icon = LibStub and LibStub("LibDBIcon-1.0", true)
+		if LDB and Icon then
+			local obj = LDB:NewDataObject(NAME, { type = "launcher", text = "Pint's Book Hunt", icon = ICON, OnClick = Click, OnTooltipShow = Tip })
+			Icon:Register(NAME, obj, store); btn = { lib = Icon }; return
+		end
+		local b = CreateFrame("Button", NAME .. "MinimapButton", Minimap)
+		b:SetSize(31, 31); b:SetFrameStrata("MEDIUM"); b:SetFrameLevel(8)
+		b:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+		b:SetHighlightTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight")
+		local ic = b:CreateTexture(nil, "BACKGROUND"); ic:SetTexture(ICON); ic:SetSize(20, 20); ic:SetPoint("CENTER", 0, 1); ic:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+		local border = b:CreateTexture(nil, "OVERLAY"); border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder"); border:SetSize(53, 53); border:SetPoint("TOPLEFT")
+		local function Place() local a = math.rad(store.angle or ANGLE); b:ClearAllPoints(); b:SetPoint("CENTER", Minimap, "CENTER", 80 * math.cos(a), 80 * math.sin(a)) end
+		Place()
+		b:RegisterForDrag("LeftButton")
+		b:SetScript("OnDragStart", function(self) self:SetScript("OnUpdate", function()
+			local mx, my = Minimap:GetCenter(); local px, py = GetCursorPosition(); local sc = Minimap:GetEffectiveScale()
+			store.angle = math.deg(math.atan2(py / sc - my, px / sc - mx)); Place() end) end)
+		b:SetScript("OnDragStop", function(self) self:SetScript("OnUpdate", nil) end)
+		b:SetScript("OnClick", Click)
+		b:SetScript("OnEnter", function(self) GameTooltip:SetOwner(self, "ANCHOR_LEFT"); Tip(GameTooltip); GameTooltip:Show() end)
+		b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+		b:SetShown(not store.hide); btn = b
+	end
+	function B.ToggleMinimap()
+		local store = acct.minimap; store.hide = not store.hide
+		if btn and btn.lib then if store.hide then btn.lib:Hide(NAME) else btn.lib:Show(NAME) end elseif btn then btn:SetShown(not store.hide) end
+		Say(store.hide and "minimap button hidden (/books minimap to show it again)." or "minimap button shown.")
 	end
 end
 
 ---------------------------------------------------------------- start up
 local ev = CreateFrame("Frame")
-for _, e in ipairs({ "PLAYER_LOGIN", "ITEM_TEXT_BEGIN", "CHAT_MSG_LOOT", "BAG_UPDATE_DELAYED", "QUEST_COMPLETE", "QUEST_TURNED_IN" }) do
+for _, e in ipairs({ "PLAYER_LOGIN", "GET_ITEM_INFO_RECEIVED", "ITEM_TEXT_BEGIN", "CHAT_MSG_LOOT", "BAG_UPDATE_DELAYED", "QUEST_COMPLETE", "QUEST_TURNED_IN" }) do
 	pcall(ev.RegisterEvent, ev, e)
 end
 ev:SetScript("OnEvent", function(_, e, a1)
@@ -421,9 +509,11 @@ ev:SetScript("OnEvent", function(_, e, a1)
 		SaveSummary()
 		C_Timer.After(5, ScanBags)
 		if B.MakeMapPins then B.MakeMapPins() end
+		B.BuildMinimap()
 		return
 	end
 	if not char then return end
+	if e == "GET_ITEM_INFO_RECEIVED" then if win and win:IsShown() then B.RewardLooks() end; return end
 	if e == "ITEM_TEXT_BEGIN" then C_Timer.After(0.1, OnItemText)
 	elseif e == "CHAT_MSG_LOOT" then OnLoot(a1)
 	elseif e == "BAG_UPDATE_DELAYED" then ScanBags()
@@ -453,7 +543,8 @@ SlashCmdList.PINTSBOOKHUNT = function(msg)
 			timeout = 0, whileDead = true, hideOnEscape = true, preferredIndex = 3,
 		}
 		StaticPopup_Show("PINTSBOOKHUNT_RESET")
+	elseif msg == "minimap" then B.ToggleMinimap()
 	elseif msg == "help" then
-		Say("/books - the checklist.  /books next - point the way to a book you still need.  /books reset - untick them all (this character).")
+		Say("/books - the checklist.  /books next - point the way to a book you still need.  /books reset - untick them all (this character).  /books minimap - show or hide the minimap button.")
 	else B.Toggle() end
 end

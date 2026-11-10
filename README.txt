@@ -19,12 +19,14 @@ WHAT IT DOES
       10 books - Friend of the Library: choose Scholarly Pendant or Erudite's Amulet
       20 books - Greater Friend of the Library: choose Field Researcher's Loop or Philanthropist's Ring
     Hand them in to Garion Wendell, top of the Mage Tower in Stormwind (Alliance),
-    or Owen Thadd in Undercity (Horde).
+    or Owen Thadd in the Magic Quarter of Undercity (Horde) - the Way button points you there.
+    Shift-click a reward to link it in chat, Ctrl-click to try it on.
 
 HOW TO USE
   /books           the checklist
   /books next      point the way to a book you still need (in your zone first)
   /books reset     untick every book for this character
+  /books minimap   show or hide the minimap button (click: the checklist, right-click: way to a book you need)
 
 FEEDBACK
   Report a bug or suggest an idea: https://github.com/Pints-Addons/PintsBookHunt/issues

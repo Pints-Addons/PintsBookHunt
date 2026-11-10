@@ -2,7 +2,7 @@
 -- Positions are zone map coordinates (the same numbers as /way and the game's map).
 local ADDON, NS = ...
 
--- { number, book, zone, uiMapID, x, y, note, video }
+-- { number, book, zone, uiMapID, x, y, note, video, continent, also = { { zone, uiMapID, x, y }, ... } (other spots) }
 local K, E = "Kalimdor", "Eastern Kingdoms"
 NS.BOOKS = {
 	{ 1, "Everyday Etiquette", "Azshara", 1447, 20.7, 62.0, "Solo", "https://youtu.be/iQcxbirQ3Z8", K },
@@ -32,7 +32,9 @@ NS.BOOKS = {
 	{ 25, "Archmage Theocritus' Research Journal", "Elwynn Forest", 1429, 65.4, 70.1, "Solo", "https://youtu.be/pAHm3wDztbg", E },
 	{ 26, "Venomous Journeys", "The Hinterlands", 1425, 36.0, 72.8, "Solo", "https://youtu.be/px9LdMrETNY", E },
 	{ 27, "Archmage Antonidas: The Unabridged Autobiography", "Ironforge", 1455, 75.7, 10.5, "Depends, easy for Alliance", "https://youtu.be/_B5KQQgkRHQ", E },
-	{ 28, "Rumi of Gnomeregan: The Collected Works", "Loch Modan", 1432, 52.7, 53.8, "Solo", "https://youtu.be/ZBRr4qB15Q0", E },
+	-- (found in two places: upstairs in the Thelsamar inn, or the Sentinel Hill inn in Westfall)
+	{ 28, "Rumi of Gnomeregan: The Collected Works", "Loch Modan", 1432, 35.6, 48.9, "Solo", "https://youtu.be/ZBRr4qB15Q0", E,
+		also = { { "Westfall", 1436, 52.7, 53.8 } } },
 	{ 29, "Runes of the Sorcerer-Kings", "Loch Modan", 1432, 77.4, 14.0, "Solo", "https://youtu.be/EcgpvlozbC4", E },
 	{ 30, "A Mind of Metal", "Searing Gorge", 1427, 37.8, 49.3, "Group, hard", "https://youtu.be/0LAtrgLWHxw", E },
 	{ 31, "Ataeric: On Arcane Curiosities", "Silverpine Forest", 1421, 43.4, 41.2, "Solo", "https://youtu.be/s7a1RhCVQcM", E },
@@ -52,12 +54,12 @@ NS.ROUTE_VIDEO = "https://www.youtube.com/watch?v=reF3hqSufkA"
 
 -- who takes the books (books are counted per character)
 NS.TURNIN = {
-	Alliance = { npc = "Garion Wendell", where = "top of the Mage Tower, Stormwind City", map = 1453 },
-	Horde = { npc = "Owen Thadd", where = "Undercity", map = 1458 },
+	Alliance = { npc = "Garion Wendell", where = "top of the Mage Tower, Stormwind City", map = 1453, x = 48.8, y = 86.6 },
+	Horde = { npc = "Owen Thadd", where = "the Magic Quarter, Undercity", map = 1458, x = 73.4, y = 33.0 },
 }
 
 -- rewards: hand in at 10 and at 20 books (pick one of the two)
 NS.TIERS = {
-	{ need = 10, title = "Friend of the Library", rewards = { "Scholarly Pendant", "Erudite's Amulet" } },
-	{ need = 20, title = "Greater Friend of the Library", rewards = { "Field Researcher's Loop", "Philanthropist's Ring" } },
+	{ need = 10, title = "Friend of the Library", rewards = { { 277203, "Scholarly Pendant" }, { 277204, "Erudite's Amulet" } } },
+	{ need = 20, title = "Greater Friend of the Library", rewards = { { 281634, "Field Researcher's Loop" }, { 281635, "Philanthropist's Ring" } } },
 }

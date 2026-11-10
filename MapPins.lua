@@ -73,18 +73,22 @@ function B.MakeMapPins()
 		local mapID = map:GetMapID()
 		local info = mapID and C_Map.GetMapInfo(mapID)
 		if not info then return end
+		local function Put(b, zmap, bx, by)
+			if zmap == mapID then
+				map:AcquirePin("PintsBookHuntPinTemplate", b, bx / 100, by / 100)
+			else
+				-- the zone it's in, shown on this bigger map (continent, world) or a city on its zone
+				local r = RectOn(zmap, mapID)
+				if r then
+					local x, y = r[1] + (r[2] - r[1]) * bx / 100, r[3] + (r[4] - r[3]) * by / 100
+					if x >= 0 and x <= 1 and y >= 0 and y <= 1 then map:AcquirePin("PintsBookHuntPinTemplate", b, x, y, (info.mapType or 3) <= 2) end
+				end
+			end
+		end
 		for _, b in ipairs(BOOKS) do
 			if not ch.got[b[1]] then
-				if b[4] == mapID then
-					map:AcquirePin("PintsBookHuntPinTemplate", b, b[5] / 100, b[6] / 100)
-				else
-					-- the zone it's in, shown on this bigger map (continent, world) or a city on its zone
-					local r = RectOn(b[4], mapID)
-					if r then
-						local x, y = r[1] + (r[2] - r[1]) * b[5] / 100, r[3] + (r[4] - r[3]) * b[6] / 100
-						if x >= 0 and x <= 1 and y >= 0 and y <= 1 then map:AcquirePin("PintsBookHuntPinTemplate", b, x, y, (info.mapType or 3) <= 2) end
-					end
-				end
+				Put(b, b[4], b[5], b[6])
+				for _, a in ipairs(b.also or {}) do Put(b, a[2], a[3], a[4]) end    -- (books found in more than one place)
 			end
 		end
 	end
